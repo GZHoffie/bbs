@@ -11,8 +11,8 @@
 This tool is built with [Seqan3](https://docs.seqan.de/seqan/3-master-user/index.html). To properly build the package, you need to have GCC >= 11.3, G++ and CMake installed.
 
 ```bash
-git clone https://github.com/GZHoffie/bucket-map.git
-cd bucket-map
+git clone https://github.com/GZHoffie/bbs.git
+cd bbs
 mkdir build
 cd build
 ```
@@ -54,4 +54,10 @@ read_id,reconstruction_result,k,path_weight,confidence
 1,ACCATAATGCGTGGGGCCGACCTCGGAATGCGGTCTCCATGCGCGTTTCCTCCAACCTAAGGTAGCCTGTAGTTCATTGGACCTCTGATGGCGCTTATAGAAACCGGGAA,11,-14.9066,0.909951
 2,TCGAAGCAGTAGGGCCTACCAAATAGGTTGGTCCTCCGTTGTATCTAAGGATTGAGTTTACCTGGCTTACACGGCAGGTACCGCCAATCTCGTCCGGCTCCGCGGCATCC,8,-32.2539,0.950223
 3,AGTTAACGTCCCACGGCGAGGCACTCTTGATCCCCACCTTCAAGAGGTGTACCGGATCATGGAGAACAAGCATACGTCGCACGCACACCATTGGACGGCGAGTGCCGAGT,10,-44.4446,0.853414
+```
+
+Use the following for a detailed guide on other input parameters.
+
+```bash
+./bbs -h
 ```
