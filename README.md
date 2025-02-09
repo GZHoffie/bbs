@@ -8,7 +8,17 @@
 
 ## Installation
 
-This tool is built with [Seqan3](https://docs.seqan.de/seqan/3-master-user/index.html). To properly build the package, you need to have GCC >= 11.3, G++ and CMake installed.
+### Download executable
+
+Simply download the executable from the latest release, via the following
+
+```bash
+wget https://github.com/GZHoffie/bbs/releases/download/v0.0.1/bbs
+```
+
+### Build from source
+
+Alternatively, build BBS from the source code. This tool is built with [Seqan3](https://docs.seqan.de/seqan/3-master-user/index.html). To properly build the package, you need to have GCC >= 11.3, G++ and CMake installed.
 
 ```bash
 git clone https://github.com/GZHoffie/bbs.git
@@ -24,7 +34,7 @@ cmake ../
 cmake --build . --target bbs
 ```
 
-The executable is then available in `build/bbs`.
+This is going to download all the dependencies, and the executable is then available in `build/bbs`.
 
 ## Quick start
 
