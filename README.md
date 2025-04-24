@@ -71,3 +71,7 @@ Use the following for a detailed guide on other input parameters.
 ```bash
 ./bbs -h
 ```
+
+## Citation
+
+[[1](https://www.biorxiv.org/content/10.1101/2025.04.16.644694v1)] Gu, Zhenhao, et al. "Efficient trace reconstruction in DNA storage systems using Bidirectional Beam Search." bioRxiv (2025): 2025-04.
