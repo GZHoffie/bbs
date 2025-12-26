@@ -74,4 +74,4 @@ Use the following for a detailed guide on other input parameters.
 
 ## Citation
 
-[[1](https://www.biorxiv.org/content/10.1101/2025.04.16.644694v1)] Gu, Zhenhao, et al. "Efficient trace reconstruction in DNA storage systems using Bidirectional Beam Search." bioRxiv (2025): 2025-04.
+Gu Z, Xin H, Sharma P, Goh GY, Wong L, Nagarajan N. [Efficient trace reconstruction in DNA storage systems using bidirectional beam search](https://www.cell.com/iscience/fulltext/S2589-0042(25)02052-8). *iScience*. 2025 Oct 21;28(11):113791. doi: 10.1016/j.isci.2025.113791. PMID: 41280695; PMCID: PMC12630026.
