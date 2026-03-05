@@ -5,7 +5,7 @@ use crate::types::*;
 
 pub struct KMerProfile {
     // Hash map that stores all the k-mer counts
-    pub kmer_profile: HashMap<KMer, (f64, f64)>, // that maps a k-mer to the quality of its last base and count
+    pub kmer_profile: HashMap<KMer, u32>, // that maps a k-mer to the quality of its last base and count
     pub kmer_set: HashSet<KMer>, // set of all kmers that appear in the reads
 }
 
@@ -72,111 +72,28 @@ impl KMarkovChain {
         k
     }
 
-    pub fn learn(&self, k: usize, reads_vec: &Vec<String>, quals_vec: Option<&Vec<String>>) -> KMerProfile {
+    pub fn learn(&self, k: usize, reads_vec: &Vec<String>) -> KMerProfile {
 
-        let mut kmer_profile: HashMap<KMer, (f64, f64)> = HashMap::new();
+        let mut kmer_profile: HashMap<KMer, u32> = HashMap::new();
         let mut kmer_set: HashSet<KMer> = HashSet::new();
 
         // learn the k-mers from the reads
-        if quals_vec.is_none() || reads_vec.len() != quals_vec.unwrap().len() {
-            // without quality scores
-            for read in reads_vec.iter() {
-                let kmer_vec = seq_to_kmer_vec(read, k, true);
-                for kmer in kmer_vec.iter() {
-                    kmer_set.insert(*kmer);
-                    if kmer_profile.get(kmer).is_none() {
-                        kmer_profile.insert(*kmer, (1.0, 1.0));
-                    } else {
-                        kmer_profile.insert(*kmer, (kmer_profile.get(kmer).unwrap().0 + 1.0, kmer_profile.get(kmer).unwrap().1 + 1.0));
-                    }
-                }
-            }
-            //for kmer in kmer_profile.keys() {
-                // print the content
-                //println!("Kmer: {}, Count: {:?}", kmer.to_string(), kmer_profile.get(kmer).unwrap());
-            //}
-            return KMerProfile {
-                kmer_profile,
-                kmer_set,
-            }
-        }
-        let quals_vec_some = quals_vec.unwrap();
-        for (read, qual) in reads_vec.iter().zip(quals_vec_some.iter()) {
-            //println!("Read: {}, Qual: {}", read, qual);
-            // length = l - k + 1 + 2k = l + k + 1
+        for read in reads_vec.iter() {
             let kmer_vec = seq_to_kmer_vec(read, k, true);
-
-            // for the other k-mers, use the quality scores
-            let qual_bytes = qual.as_bytes();
-
-            let qual_weights: Vec<f64> = qual_bytes.iter().map(|&q| qual_to_weight(q)).collect();
-            // append k 1.0s to both ends of qual weights to represent the padded '$' characters.
-            // length = l + 2k
-            //println!("Qual len: {}, Read len: {}", qual_weights.len(), read.len());
-            assert!(qual.len() == read.len());
-            let mut qual_weights_padded: Vec<f64> = vec![1.0; k];
-            qual_weights_padded.extend(qual_weights);
-            qual_weights_padded.extend(vec![1.0; k]);
-
-            assert!(qual_weights_padded.len() == read.len() + 2 * k);
-
-            //println!("Padded qual weights: {:?}", qual_weights_padded);
-
-            
-            for i in 0..kmer_vec.len() {
-                let kmer = &kmer_vec[i];
+            for kmer in kmer_vec.iter() {
                 kmer_set.insert(*kmer);
-
-                // update kmer_profile with the quality of the first and last base of the k-mer
-                let last_base_weight = qual_weights_padded[i + k - 1];
-                let first_base_weight = qual_weights_padded[i];
-
                 if kmer_profile.get(kmer).is_none() {
-                    kmer_profile.insert(*kmer, (first_base_weight, last_base_weight));
+                    kmer_profile.insert(*kmer, 1);
                 } else {
-                    kmer_profile.insert(*kmer, (kmer_profile.get(kmer).unwrap().0 + first_base_weight, kmer_profile.get(kmer).unwrap().1 + last_base_weight));
+                    kmer_profile.insert(*kmer, kmer_profile.get(kmer).unwrap() + 1);
                 }
-
-
-                // update the weight of the neighbors of the k-mer 
-                if last_base_weight < 1.0 {
-                    for neighbor in kmer.neighbor_kmers_last_base() {
-                        if neighbor == *kmer {
-                            continue;
-                        }
-                        if kmer_profile.get(&neighbor).is_none() {
-                            kmer_profile.insert(neighbor, (0.0, (1.0 - last_base_weight) / 3.0));
-                        } else { 
-                            kmer_profile.insert(neighbor, (kmer_profile.get(&neighbor).unwrap().0, kmer_profile.get(&neighbor).unwrap().1 + (1.0 - last_base_weight) / 3.0));
-                        }
-                    }
-                }
-
-                if first_base_weight < 1.0 {
-                    for neighbor in kmer.neighbor_kmers_first_base() {
-                        if neighbor == *kmer {
-                            continue;
-                        }
-                        if kmer_profile.get(&neighbor).is_none() {
-                            kmer_profile.insert(neighbor, ((1.0 - first_base_weight) / 3.0, 0.0));
-                        } else { 
-                            kmer_profile.insert(neighbor, (kmer_profile.get(&neighbor).unwrap().0 + (1.0 - first_base_weight) / 3.0, kmer_profile.get(&neighbor).unwrap().1));
-                        }
-                    }
-                }
-            } 
+            }
         }
-
-        //println!("{:?}", kmer_profile);
-        //for (kmer, count) in kmer_profile.iter() {
-        //    println!("Kmer: {}, Count: {}", index_to_kmer(*kmer, k), count);
-        //}
-
         //for kmer in kmer_profile.keys() {
             // print the content
             //println!("Kmer: {}, Count: {:?}", kmer.to_string(), kmer_profile.get(kmer).unwrap());
         //}
-        KMerProfile {
+        return KMerProfile {
             kmer_profile,
             kmer_set,
         }
@@ -197,7 +114,7 @@ impl KMarkovChain {
 
         for (kmer_vec, score) in frontier.iter() {
             let current_kmer = *kmer_vec.last().unwrap();
-            let mut total_count: f64 = 0.0;
+            let mut total_count: u32 = 0;
 
             // first iteration to find the total count of next kmers
             // All the k-mers that can be the next k-mer in the de Bruijn graph
@@ -237,7 +154,7 @@ impl KMarkovChain {
                     continue;
                 }
                 if profile.kmer_profile.get(next_kmer).is_some() {
-                    total_count += if forward { profile.kmer_profile.get(next_kmer).unwrap().1 } else { profile.kmer_profile.get(next_kmer).unwrap().0 };
+                    total_count += profile.kmer_profile.get(next_kmer).unwrap();
 
                 }
             }
@@ -252,12 +169,12 @@ impl KMarkovChain {
                     continue;
                 }
                 let count = if profile.kmer_profile.get(next_kmer).is_some() {
-                    if forward { profile.kmer_profile.get(next_kmer).unwrap().1 } else { profile.kmer_profile.get(next_kmer).unwrap().0 }
+                    *profile.kmer_profile.get(next_kmer).unwrap() as f64
                 } else {
-                    0.0
+                    0.
                 };
                 if count > 0.0 {
-                    let new_score = score + ((count + 1.0 * self.alpha) / (total_count + 4.0 * self.alpha)).log2();
+                    let new_score = score + ((count + 1.0 * self.alpha) / (total_count as f64 + 4.0 * self.alpha)).log2();
                     
                     // append the new kmer to the kmer_vec
                     let mut kmer_vec_new = kmer_vec.clone();
@@ -368,14 +285,14 @@ impl KMarkovChain {
     }
 
     // function that uses all the above to find the consensus sequence
-    pub fn find_consensus(&self, target_length: usize, reads_vec: &Vec<String>, quals_vec: Option<&Vec<String>>) -> (String, f64) {
+    pub fn find_consensus(&self, target_length: usize, reads_vec: &Vec<String>) -> (String, f64) {
         // find a suitable k
         let k = self.select_k(&reads_vec);
         let chosen_k = k + 1;
         let max_steps = target_length - chosen_k + 1;
 
         // learn the kmer profile
-        let profile = self.learn(chosen_k, reads_vec, quals_vec);
+        let profile = self.learn(chosen_k, reads_vec);
 
         // perform beam search in both direction
         let (best_path_forward, best_score_forward) = self.beam_search(chosen_k, &profile, target_length, true);

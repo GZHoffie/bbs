@@ -91,7 +91,7 @@ fn parse_clusters_file_dna_storage_toolkit(
             //println!("Reads: {:?}", reads);
             //println!("Q-scores: {:?}", qscores);
             // find consensus for this cluster
-            let (consensus_sequence, score) = kmc.find_consensus(args.length, &reads, if args.with_qscores { Some(&qscores) } else { None });
+            let (consensus_sequence, score) = kmc.find_consensus(args.length, &reads);
 
             // delete the sequences of '$' at the beginning and end of the consensus sequence
             let consensus_sequence = consensus_sequence.trim_matches('$').to_string();
@@ -138,7 +138,7 @@ fn parse_clusters_file_microsoft(
                         continue;
                     }
                 } else {
-                    let (consensus_sequence, score) = kmc.find_consensus(args.length, &current_cluster, None);
+                    let (consensus_sequence, score) = kmc.find_consensus(args.length, &current_cluster);
                     let consensus_sequence = consensus_sequence.trim_matches('$').to_string();
                     println!("{}", consensus_sequence);
                     current_cluster.clear();
@@ -152,7 +152,7 @@ fn parse_clusters_file_microsoft(
             }
         }
         if !current_cluster.is_empty() {
-            let (consensus_sequence, score) = kmc.find_consensus(args.length, &current_cluster, None);
+            let (consensus_sequence, score) = kmc.find_consensus(args.length, &current_cluster);
             let consensus_sequence = consensus_sequence.trim_matches('$').to_string();
             println!("{}", consensus_sequence);
         }
