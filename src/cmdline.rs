@@ -1,7 +1,7 @@
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
-#[clap(author, version, about = "b3s", arg_required_else_help = true, disable_help_subcommand = true)]
+#[clap(author, version, about = "Bidirectional beam search for efficient trace reconstruction.", arg_required_else_help = true, disable_help_subcommand = true)]
 pub struct Cli {
     #[clap(subcommand,)]
     pub mode: Mode,
@@ -31,21 +31,24 @@ pub struct ConsensusArgs {
     #[clap(short, default_value_t = 20, help_heading = "ALGORITHM", help ="Beam width used in beam search.")]
     pub beam_width: u8,
 
-    #[clap(short, help_heading = "INPUT", help = "Include quality scores.")]
-    pub with_qscores: bool,
+    #[clap(short='S', help_heading = "ALGORITHM", help = "Use single-sided de Bruijn graph. If not set, a double-sided de Bruijn graph will be used.")]
+    pub single_sided: bool,
 
     #[clap(short, default_value_t = 100, help_heading = "INPUT", help = "Length of the target sequences.")]
     pub length: usize,
 
-    #[clap(short, help_heading = "INPUT", help = "For testing only: number of reads to use in the reconstruction process. If this parameter is not set, all reads in the cluster will be used.")]
+    #[clap(short, default_value_t = String::from("==="), help_heading = "INPUT", help = "Separator for clusters in Microsoft format. If the line starts with this separator, it marks the boundary/start of a new cluster.")]
+    pub separator: String,
+
+    #[clap(short, help_heading = "INPUT", hidden = true, help = "For testing only: number of reads to use in the reconstruction process. If this parameter is not set, all reads in the cluster will be used.")]
     pub num_reads: Option<usize>,
 
-    #[clap(short, default_value_t = String::new(), help_heading = "OUTPUT", help = "Output file.")]
-    pub output_path: String,
+    #[clap(short, help_heading = "OUTPUT", help = "Output file.")]
+    pub output_path: Option<String>,
 
     #[clap(short, help_heading = "DEBUG", help = "Enable debug mode.")]
     pub debug: bool,
 
-    #[clap(long, help_heading = "INPUT", help = "Microsoft format for input clusters.")]
-    pub microsoft_format: bool,
+    #[clap(long, help_heading = "INPUT", default_value_t = String::from("microsoft"), help = "Format for input clusters, currently supports 'microsoft' (default) and 'dna_storage_toolkit'.")]
+    pub format: String,
 }
