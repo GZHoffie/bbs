@@ -21,13 +21,16 @@ pub struct KMarkovChain {
     // Pseudo-count for the kmer profile
     pub alpha: f64,
 
+    // Whether to use a double-sided de Bruijn graph (i.e., search in both directions)
+    pub double_sided: bool,
+
     // Debug mode
     pub debug: bool,
 }
 
 impl KMarkovChain {
-    pub fn new(k_min: usize, k_max: usize, b: usize, alpha: f64, debug: bool) -> Self {
-        KMarkovChain { k_min, k_max, b, alpha, debug }
+    pub fn new(k_min: usize, k_max: usize, b: usize, alpha: f64, double_sided: bool, debug: bool) -> Self {
+        KMarkovChain { k_min, k_max, b, alpha, double_sided, debug }
     }
 
 
@@ -77,7 +80,6 @@ impl KMarkovChain {
         let mut kmer_profile: HashMap<KMer, u32> = HashMap::new();
         let mut kmer_set: HashSet<KMer> = HashSet::new();
 
-        // learn the k-mers from the reads
         for read in reads_vec.iter() {
             let kmer_vec = seq_to_kmer_vec(read, k, true);
             for kmer in kmer_vec.iter() {
@@ -154,7 +156,7 @@ impl KMarkovChain {
                     continue;
                 }
                 if profile.kmer_profile.get(next_kmer).is_some() {
-                    total_count += profile.kmer_profile.get(next_kmer).unwrap();
+                    total_count += *profile.kmer_profile.get(next_kmer).unwrap() as f64;
 
                 }
             }
@@ -173,8 +175,8 @@ impl KMarkovChain {
                 } else {
                     0.
                 };
-                if count > 0.0 {
-                    let new_score = score + ((count + 1.0 * self.alpha) / (total_count as f64 + 4.0 * self.alpha)).log2();
+                if count > 0. {
+                    let new_score = score + ((count + 1.0 * self.alpha) / (total_count + 4.0 * self.alpha)).log2();
                     
                     // append the new kmer to the kmer_vec
                     let mut kmer_vec_new = kmer_vec.clone();
@@ -289,7 +291,6 @@ impl KMarkovChain {
         // find a suitable k
         let k = self.select_k(&reads_vec);
         let chosen_k = k + 1;
-        let max_steps = target_length - chosen_k + 1;
 
         // learn the kmer profile
         let profile = self.learn(chosen_k, reads_vec);
@@ -297,8 +298,12 @@ impl KMarkovChain {
         // perform beam search in both direction
         let (best_path_forward, best_score_forward) = self.beam_search(chosen_k, &profile, target_length, true);
 
-        let (best_path_backward, best_score_backward) = self.beam_search(chosen_k, &profile, target_length, false);
+        if !self.double_sided {
+            let best_path = self.path_to_sequence(&best_path_forward, chosen_k, true);
+            return (best_path, best_score_forward);
+        }
 
+        let (best_path_backward, best_score_backward) = self.beam_search(chosen_k, &profile, target_length, false);
         
         let (best_path, best_score) = if (best_score_forward >= best_score_backward && best_path_forward.len() == best_path_backward.len()) ||(best_path_forward.len() > best_path_backward.len()) {
             (self.path_to_sequence(&best_path_forward, chosen_k, true), best_score_forward)

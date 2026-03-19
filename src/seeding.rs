@@ -15,7 +15,7 @@ pub struct KMer {
 
 impl KMer {
     pub fn new(k: usize) -> Self {
-        if k > 64 {
+        if k > 32 {
             panic!("K-mer length too long to fit in 3 u32 objects");
         }
 

@@ -10,11 +10,13 @@ use std::io::{BufRead, BufReader};
 
 pub fn consensus(args: ConsensusArgs) {
     // [TODO] Allow other format of input
-    if args.microsoft_format {
+    if args.format.to_lowercase() == "microsoft" {
         parse_clusters_file_microsoft(&args).unwrap();
         return;
-    } else {
+    } else if args.format.to_lowercase() == "dna_storage_toolkit" {
         parse_clusters_file_dna_storage_toolkit(&args).unwrap();
+    } else {
+        panic!("Unsupported input format: {}. Currently supports 'microsoft' and 'dna_storage_toolkit'.", args.format);
     }
 }
 
@@ -22,7 +24,7 @@ fn parse_clusters_file_dna_storage_toolkit(
     args: &ConsensusArgs,
 ) -> Result<(), Box<dyn std::error::Error>> {
 
-    let kmc = KMarkovChain::new(args.k_min as usize, args.k_max as usize, args.beam_width as usize, args.alpha as f64, args.debug);
+    let kmc = KMarkovChain::new(args.k_min as usize, args.k_max as usize, args.beam_width as usize, args.alpha as f64, !args.single_sided, args.debug);
 
 
     for path in &args.files {
@@ -108,7 +110,7 @@ fn parse_clusters_file_microsoft(
     args: &ConsensusArgs,
 ) -> Result<(), Box<dyn std::error::Error>> {
 
-    let kmc = KMarkovChain::new(args.k_min as usize, args.k_max as usize, args.beam_width as usize, args.alpha as f64, args.debug);
+    let kmc = KMarkovChain::new(args.k_min as usize, args.k_max as usize, args.beam_width as usize, args.alpha as f64, !args.single_sided, args.debug);
 
 
     for path in &args.files {
@@ -126,7 +128,7 @@ fn parse_clusters_file_microsoft(
 
         //println!("Processing file: {}", path);
         while let Some(line) = lines.next().transpose()? {
-            if line.trim_start().starts_with("===") {
+            if line.trim_start().starts_with(args.separator.as_str()) {
                 if current_cluster.is_empty() {
                     if first_cluster {
                         // Just starting, no cluster to process yet
