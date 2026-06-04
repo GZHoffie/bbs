@@ -3,20 +3,21 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy)]
 pub struct KMer {
     k: usize,
 
-    // represent k-mer using 3 u32 objects.
-    seq1: u32,
-    seq2: u32,
-    seq3: u32,
+    // represent k-mer using 3 u64 objects.
+    seq1: u64,
+    seq2: u64,
+    seq3: u64,
 }
 
 impl KMer {
     pub fn new(k: usize) -> Self {
-        if k > 32 {
-            panic!("K-mer length too long to fit in 3 u32 objects");
+        if k > 64 {
+            panic!("K-mer length too long to fit in 3 u64 objects");
         }
 
 
@@ -36,7 +37,7 @@ impl KMer {
         let mut kmer = KMer::new(k);
 
         for (i, b) in kmer_str.bytes().enumerate() {
-            let nuc = BYTE_TO_SEQ[b as usize] as u32;
+            let nuc = BYTE_TO_SEQ[b as usize] as u64;
             
             let nuc1 = nuc & 1;
             let nuc2 = (nuc >> 1) & 1;
@@ -51,9 +52,9 @@ impl KMer {
     }
 
     /**
-     * Return the last nucleotide of the k-mer as a u32, where A=0, C=1, G=2, T=3.
+     * Return the last nucleotide of the k-mer as a u64, where A=0, C=1, G=2, T=3.
      */
-    pub fn last_nuc_as_u32(&self) -> u32 {
+    pub fn last_nuc_as_u64(&self) -> u64 {
         let nuc1 = self.seq1 & 1;
         let nuc2 = self.seq2 & 1;
         let nuc3 = self.seq3 & 1;
@@ -62,7 +63,7 @@ impl KMer {
     }
 
 
-    pub fn first_nuc_as_u32(&self) -> u32 {
+    pub fn first_nuc_as_u64(&self) -> u64 {
         let shift = self.k - 1;
         let nuc1 = (self.seq1 >> shift) & 1;
         let nuc2 = (self.seq2 >> shift) & 1;
@@ -110,7 +111,7 @@ impl KMer {
     pub fn next_kmers_at_end(&self, ending_kmer: KMer) -> Vec<KMer> {
         if *self == ending_kmer {
             return Vec::new();
-        } else if self.last_nuc_as_u32() == END_MARKER as u32 {
+        } else if self.last_nuc_as_u64() == END_MARKER as u64 {
             return vec![self.next_kmer_end()];
         }
 
@@ -186,9 +187,9 @@ impl KMer {
      * by shifting the current k-mer and adding an end marker ('$') at the end.
      */
     pub fn next_kmer_end(&self) -> KMer {
-        let nuc1 = (END_MARKER & 1) as u32;
-        let nuc2 = ((END_MARKER >> 1) & 1) as u32;
-        let nuc3 = ((END_MARKER >> 2) & 1) as u32;
+        let nuc1 = (END_MARKER & 1) as u64;
+        let nuc2 = ((END_MARKER >> 1) & 1) as u64;
+        let nuc3 = ((END_MARKER >> 2) & 1) as u64;
 
         let next_seq1 = ((self.seq1 << 1) | nuc1) & ((1 << self.k) - 1);
         let next_seq2 = ((self.seq2 << 1) | nuc2) & ((1 << self.k) - 1);
@@ -204,7 +205,7 @@ impl KMer {
 
 
     fn _update_with_nuc(&mut self, nuc: u8) {
-        let nuc_f = BYTE_TO_SEQ[nuc as usize] as u32;
+        let nuc_f = BYTE_TO_SEQ[nuc as usize] as u64;
 
         let nuc1 = nuc_f & 1;
         let nuc2 = (nuc_f >> 1) & 1;
@@ -245,7 +246,7 @@ impl KMer {
     pub fn prev_kmers_at_end(&self, ending_kmer: KMer) -> Vec<KMer> {
         if *self == ending_kmer {
             return Vec::new();
-        } else if self.first_nuc_as_u32() == END_MARKER as u32 {
+        } else if self.first_nuc_as_u64() == END_MARKER as u64 {
             return vec![self.prev_kmer_end()];
         }
 
@@ -257,9 +258,9 @@ impl KMer {
     }
 
     pub fn prev_kmer_end(&self) -> KMer {
-        let nuc1 = (END_MARKER & 1) as u32;
-        let nuc2 = ((END_MARKER >> 1) & 1) as u32;
-        let nuc3 = ((END_MARKER >> 2) & 1) as u32;
+        let nuc1 = (END_MARKER & 1) as u64;
+        let nuc2 = ((END_MARKER >> 1) & 1) as u64;
+        let nuc3 = ((END_MARKER >> 2) & 1) as u64;
 
         let prev_seq1 = ((self.seq1 >> 1) | (nuc1 << (self.k - 1))) & ((1 << self.k) - 1);
         let prev_seq2 = ((self.seq2 >> 1) | (nuc2 << (self.k - 1))) & ((1 << self.k) - 1);
@@ -435,13 +436,13 @@ pub fn qual_to_kmer_vec(
 
 
 /**
- * @brief Convert a k-mer string to a u32 index
+ * @brief Convert a k-mer string to a u64 index
  */
-pub fn kmer_to_index(kmer: &str) -> u32 {
-    // use BYTE_TO_SEQ to convert the k-mer to a u32
-    let mut res: u32 = 0;
+pub fn kmer_to_index(kmer: &str) -> u64 {
+    // use BYTE_TO_SEQ to convert the k-mer to a u64
+    let mut res: u64 = 0;
     for b in kmer.bytes() {
-        let nuc = BYTE_TO_SEQ[b as usize] as u32;
+        let nuc = BYTE_TO_SEQ[b as usize] as u64;
         res = (res << 2) | nuc;
     }
     res
@@ -454,7 +455,7 @@ pub fn kmer_to_index(kmer: &str) -> u32 {
  * @param k The length of the k-mer
  * @returns The k-mer string
  */
-pub fn index_to_kmer(kmer: u32, k: usize) -> String {
+pub fn index_to_kmer(kmer: u64, k: usize) -> String {
     // use SEQ_TO_BYTE to convert the k-mer to a string
     let mut kmer_str = String::new();
     for i in (0..k).rev() {

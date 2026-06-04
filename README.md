@@ -13,48 +13,48 @@
 Simply download the executable from the latest release, via the following
 
 ```bash
-wget https://github.com/GZHoffie/bbs/releases/download/v0.0.1/bbs
+wget https://github.com/GZHoffie/bbs/releases/download/v0.2.0/bbs
 ```
 
 ### Build from source
 
-Alternatively, build BBS from the source code. This tool is built with [Seqan3](https://docs.seqan.de/seqan/3-master-user/index.html). To properly build the package, you need to have GCC >= 11.3, G++ and CMake installed.
+Alternatively, build skiver from the source code. Install [rust](https://rust-lang.org/tools/install/), and build using
 
-```bash
-git clone https://github.com/GZHoffie/bbs.git
+```
+https://github.com/GZHoffie/bbs.git
 cd bbs
-mkdir build
-cd build
+
+# If default rust install directory is ~/.cargo
+cargo install --path . --root ~/.cargo
 ```
 
-Build the project with the command
+BBS is available by running 
 
 ```
-cmake ../
-cmake --build . --target bbs
+bbs
 ```
-
-This is going to download all the dependencies, and the executable is then available in `build/bbs`.
 
 ## Quick start
 
-Currently, BBS supports input format that is similar to the [CNR dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset). Below is a quick demo.
+Currently, BBS supports 2 input formats,
+
+- `dna_storage_toolkit` format.
+- `microsoft` format: similar to the [CNR dataset](https://github.com/microsoft/clustered-nanopore-reads-dataset). Below is a quick demo.
+
 
 ```bash
 # Download the Microsoft CNR dataset
 git clone https://github.com/microsoft/clustered-nanopore-reads-dataset.git
 
 # Assume that we are still in the build/ directory
-# To output the reconstructed sequence directly, use `./bbs -i <input_clusters> -l <read_length> -s <cluster_separator> > <output_file_name>`
-./bbs -i clustered-nanopore-reads-dataset/Clusters.txt -l 110 -s "====" > output.txt
+# To output the reconstructed sequence directly, use `./bbs -i <input_clusters> -l <read_length> > <output_file_name>`
+bbs clustered-nanopore-reads-dataset/Clusters.txt -l 110 > output.txt
 ```
-
-The separator is an indicator string that separates the clusters. If we read a line that contains the specified separator, we regard it as a new cluster.
 
 For more detailed output, use the following command.
 
 ```bash
-./bbs -i clustered-nanopore-reads-dataset/Clusters.txt -l 110 -s "====" -o output.csv > /dev/null
+bbs clustered-nanopore-reads-dataset/Clusters.txt -l 110 -o output_verbose.csv
 ```
 
 In the output `csv` file, there will be 5 fields, indicating the index of the cluster, reconstructed sequence, the value of `k` used, the total path weight, and the confidence value.
@@ -69,7 +69,7 @@ read_id,reconstruction_result,k,path_weight,confidence
 Use the following for a detailed guide on other input parameters.
 
 ```bash
-./bbs -h
+bbs -h
 ```
 
 ## Citation

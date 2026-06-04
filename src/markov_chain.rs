@@ -5,11 +5,12 @@ use crate::types::*;
 
 pub struct KMerProfile {
     // Hash map that stores all the k-mer counts
-    pub kmer_profile: HashMap<KMer, u32>, // that maps a k-mer to the quality of its last base and count
+    pub kmer_profile: HashMap<KMer, u64>, // that maps a k-mer to the quality of its last base and count
     pub kmer_set: HashSet<KMer>, // set of all kmers that appear in the reads
 }
 
 
+#[derive(Clone)]
 pub struct KMarkovChain {
     // Range of k
     pub k_min: usize,
@@ -43,7 +44,7 @@ impl KMarkovChain {
         
         // gradually increase k
         let mut k = self.k_min;
-        while k <= self.k_max {
+        while k < self.k_max {
             for i in 0..reads_vec.len() {
                 if flag[i] {
                     // skip if the read is already marked as passed
@@ -77,7 +78,7 @@ impl KMarkovChain {
 
     pub fn learn(&self, k: usize, reads_vec: &Vec<String>) -> KMerProfile {
 
-        let mut kmer_profile: HashMap<KMer, u32> = HashMap::new();
+        let mut kmer_profile: HashMap<KMer, u64> = HashMap::new();
         let mut kmer_set: HashSet<KMer> = HashSet::new();
 
         for read in reads_vec.iter() {
@@ -95,7 +96,7 @@ impl KMarkovChain {
             // print the content
             //println!("Kmer: {}, Count: {:?}", kmer.to_string(), kmer_profile.get(kmer).unwrap());
         //}
-        return KMerProfile {
+        KMerProfile {
             kmer_profile,
             kmer_set,
         }
@@ -116,7 +117,7 @@ impl KMarkovChain {
 
         for (kmer_vec, score) in frontier.iter() {
             let current_kmer = *kmer_vec.last().unwrap();
-            let mut total_count: u32 = 0;
+            let mut total_count: f64 = 0.0;
 
             // first iteration to find the total count of next kmers
             // All the k-mers that can be the next k-mer in the de Bruijn graph
@@ -206,7 +207,7 @@ impl KMarkovChain {
         profile: &KMerProfile,
         target_length: usize,
         forward: bool
-    ) -> (Vec<KMer>, f64) {
+    ) -> HashMap<String, f64> {
         // set the initial frontier as <'$' * k, 0.0>
         let init_kmer = KMer::from_str(k, &"$".repeat(k));
         let mut frontier: Vec<(Vec<KMer>, f64)> = vec![(vec![init_kmer], 0.0)];
@@ -258,8 +259,20 @@ impl KMarkovChain {
             println!("Best path: {}, score: {}", self.path_to_sequence(&best_path, k, forward), best_score);
         }
 
-        // return the best path
-        (best_path, best_score)
+        let mut sequence_scores: HashMap<String, f64> = HashMap::new();
+        for (kmer_vec, score) in frontier.iter() {
+            let sequence = self.path_to_sequence(kmer_vec, k, forward);
+            sequence_scores
+                .entry(sequence)
+                .and_modify(|current_score| {
+                    if *score > *current_score {
+                        *current_score = *score;
+                    }
+                })
+                .or_insert(*score);
+        }
+
+        sequence_scores
     }
 
     pub fn path_to_sequence(&self, kmer_vec: &Vec<KMer>, k: usize, forward: bool) -> String {
@@ -271,7 +284,7 @@ impl KMarkovChain {
             let mut sequence: String = kmer_vec[0].to_string();
     
             for i in 1..kmer_vec.len() {
-                let base = kmer_vec[i].last_nuc_as_u32();
+                let base = kmer_vec[i].last_nuc_as_u64();
                 sequence.push(SEQ_TO_BYTE[base as usize] as char);
             }
             sequence
@@ -279,7 +292,7 @@ impl KMarkovChain {
             let mut sequence: String = kmer_vec[0].to_string();
     
             for i in 1..kmer_vec.len() {
-                let base = kmer_vec[i].first_nuc_as_u32();
+                let base = kmer_vec[i].first_nuc_as_u64();
                 sequence.insert(0, SEQ_TO_BYTE[base as usize] as char);
             }
             sequence
@@ -287,7 +300,8 @@ impl KMarkovChain {
     }
 
     // function that uses all the above to find the consensus sequence
-    pub fn find_consensus(&self, target_length: usize, reads_vec: &Vec<String>) -> (String, f64) {
+    // returns (sequence, k, best_path_weight, confidence)
+    pub fn find_consensus(&self, target_length: usize, reads_vec: &Vec<String>) -> (String, usize, f64, f64) {
         // find a suitable k
         let k = self.select_k(&reads_vec);
         let chosen_k = k + 1;
@@ -295,22 +309,43 @@ impl KMarkovChain {
         // learn the kmer profile
         let profile = self.learn(chosen_k, reads_vec);
 
-        // perform beam search in both direction
-        let (best_path_forward, best_score_forward) = self.beam_search(chosen_k, &profile, target_length, true);
+        // perform beam search in both directions
+        let fwd_scores = self.beam_search(chosen_k, &profile, target_length, true);
+        let mut joint_scores = fwd_scores;
 
-        if !self.double_sided {
-            let best_path = self.path_to_sequence(&best_path_forward, chosen_k, true);
-            return (best_path, best_score_forward);
+        if self.double_sided {
+            let bwd_scores = self.beam_search(chosen_k, &profile, target_length, false);
+            for (sequence, score) in bwd_scores {
+                joint_scores
+                    .entry(sequence)
+                    .and_modify(|current_score| {
+                        if score > *current_score {
+                            *current_score = score;
+                        }
+                    })
+                    .or_insert(score);
+            }
         }
 
-        let (best_path_backward, best_score_backward) = self.beam_search(chosen_k, &profile, target_length, false);
-        
-        let (best_path, best_score) = if (best_score_forward >= best_score_backward && best_path_forward.len() == best_path_backward.len()) ||(best_path_forward.len() > best_path_backward.len()) {
-            (self.path_to_sequence(&best_path_forward, chosen_k, true), best_score_forward)
+        let (seq, best_score) = joint_scores
+            .iter()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .map(|(sequence, score)| (sequence.clone(), *score))
+            .unwrap_or_else(|| (String::new(), 0.0));
+
+        // confidence via softmax over the joint sequence-score map.
+        let confidence = if joint_scores.is_empty() {
+            0.0
         } else {
-            (self.path_to_sequence(&best_path_backward, chosen_k, false), best_score_backward)
+            let exp_sum: f64 = joint_scores.values().map(|&score| (score - best_score).exp()).sum();
+            if exp_sum == 0.0 {
+                0.0
+            } else {
+                1.0 / exp_sum
+            }
         };
 
-        (best_path, best_score)
+        let seq = seq.trim_matches('$').to_string();
+        (seq, chosen_k, best_score, confidence)
     }
 }

@@ -1,14 +1,10 @@
 use clap::Parser;
 
-
 use bbs::consensus;
-use bbs::cmdline::*;
-
+use bbs::cmdline::Cli;
 
 fn main() {
     let cli = Cli::parse();
-    match cli.mode {
-        Mode::Consensus(consensus_args) => consensus::consensus(consensus_args),    
-    }
+    consensus::consensus(cli);
 }
 
