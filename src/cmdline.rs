@@ -9,7 +9,7 @@ pub struct Cli {
     #[clap(short='k', default_value_t = 4, help_heading = "ALGORITHM", help ="Minimum value of k for de Bruijn graph construction.")]
     pub k_min: u8,
 
-    #[clap(short='K', default_value_t = 63, help_heading = "ALGORITHM", help ="Maximum value of k for de Bruijn graph construction.")]
+    #[clap(short='K', default_value_t = 62, help_heading = "ALGORITHM", help ="Maximum value of k for de Bruijn graph construction.")]
     pub k_max: u8,
 
     #[clap(short, default_value_t = 1.0, help_heading = "ALGORITHM", help ="Value of alpha for smoothing.")]
